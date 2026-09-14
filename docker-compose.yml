@@ -1,0 +1,69 @@
+name: conselho-tutelar
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: conselho_tutelar_mysql
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-conselhotutelar}
+      MYSQL_USER: ${DB_USER:-conselho_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-conselhopassword}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: conselho_tutelar_api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-conselhotutelar}
+      DB_USER: ${DB_USER:-conselho_user}
+      DB_PASSWORD: ${DB_PASSWORD:-conselhopassword}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000}
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ${FRONT_PATH:-../conselho-tutelar-front}
+      dockerfile: Dockerfile
+    container_name: conselho_tutelar_front
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    volumes:
+      - ${FRONT_PATH:-../conselho-tutelar-front}:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+    driver: local
