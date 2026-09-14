@@ -1,11 +1,20 @@
 {
   "name": "conselho-back",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Back-end da aplicação Conselho Tutelar",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node server.js --watch"
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:db": "docker compose up -d db",
+    "migrate": "node src/database/migrate.js",
+    "db:migrate": "node src/database/migrate.js",
+    "migrate:create": "node scripts/create-migration.js",
+    "db:init": "node scripts/init-db.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
