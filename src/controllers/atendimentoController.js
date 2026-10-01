@@ -1,4 +1,5 @@
 const { query } = require('../config/db');
+const { registrarLog } = require('../services/auditoriaService');
 
 const createAtendimento = async (req, res) => {
     try {
@@ -23,10 +24,24 @@ const createAtendimento = async (req, res) => {
                 const novoId = (ultimoDireito?.maxId || 0) + 1;
 
                 await query('INSERT INTO DireitoViolado (idDireitoViolado, Descricao) VALUES (?, ?)',
-                    [novoId, direitoViolado]);
+                    [novoId, direitoViolado.trim()]);
                 idDireitoViolado = novoId;
             } else {
                 idDireitoViolado = direitoVioladoRecord.idDireitoViolado;
+            }
+        }
+
+        let violadorId = null;
+        if (quemEhOViolador && quemEhOViolador.trim() !== '') {
+            try {
+                const [ultimoMaior] = await query('SELECT MAX(idMaior) as maxId FROM Maioridade');
+                const novoMaiorId = (ultimoMaior?.maxId || 0) + 1;
+                await query(`
+                    INSERT INTO Maioridade (idMaior, nome) VALUES (?, ?)
+                `, [novoMaiorId, quemEhOViolador.trim()]);
+                violadorId = novoMaiorId;
+            } catch (errMaior) {
+                console.warn('Aviso ao registrar violador em Maioridade:', errMaior.message);
             }
         }
 
@@ -34,15 +49,16 @@ const createAtendimento = async (req, res) => {
         const idAtendimento = (ultimoAtendimento?.maxId || 0) + 1;
 
         const sql = `INSERT INTO Atendimento 
-            (idAtendimento, Data, Hora, Relato, idDireitoViolado) 
-            VALUES (?, ?, ?, ?, ?)`;
+            (idAtendimento, Data, Hora, Relato, idDireitoViolado, Violador_jrViolador) 
+            VALUES (?, ?, ?, ?, ?, ?)`;
 
         await query(sql, [
             idAtendimento,
             dataAtendimento || null,
             horaAtendimento || null,
             relatos || null,
-            idDireitoViolado
+            idDireitoViolado,
+            violadorId
         ]);
 
         const atendimento = {
@@ -51,8 +67,22 @@ const createAtendimento = async (req, res) => {
             Hora: horaAtendimento || null,
             Relato: relatos || null,
             idDireitoViolado,
+            quemEhOViolador,
             assinatura: assinatura || null
         };
+
+        // Trilha de Auditoria Zero-Trust
+        await registrarLog({
+            usuarioId: req.user?.idUsuario,
+            username: req.user?.username || 'sistema',
+            role: req.user?.role || 'conselheiro',
+            acao: 'REGISTRAR_ATENDIMENTO',
+            recurso: `/atendimentos/${idAtendimento}`,
+            status: 'SUCESSO',
+            detalhes: { idAtendimento, dataAtendimento, direitoViolado },
+            ip: req.ip,
+            userAgent: req.headers['user-agent']
+        });
 
         res.status(201).json({ message: 'Atendimento criado com sucesso', atendimento });
     } catch (error) {
@@ -64,19 +94,43 @@ const createAtendimento = async (req, res) => {
 const getAtendimentos = async (req, res) => {
     try {
         const atendimentos = await query(`
-            SELECT a.*, d.Descricao as direitoVioladoDescricao 
+            SELECT a.*, d.Descricao as direitoVioladoDescricao, m.nome as nomeViolador 
             FROM Atendimento a 
             LEFT JOIN DireitoViolado d ON a.idDireitoViolado = d.idDireitoViolado 
+            LEFT JOIN Maioridade m ON a.Violador_jrViolador = m.idMaior 
             ORDER BY a.idAtendimento DESC
         `);
         res.json(atendimentos);
     } catch (error) {
         console.error('Erro ao buscar atendimentos:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+        res.status(500).json({ error: 'Erro interno do servidor', details: error.message });
+    }
+};
+
+const getAtendimentoById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const atendimentos = await query(`
+            SELECT a.*, d.Descricao as direitoVioladoDescricao, m.nome as nomeViolador 
+            FROM Atendimento a 
+            LEFT JOIN DireitoViolado d ON a.idDireitoViolado = d.idDireitoViolado 
+            LEFT JOIN Maioridade m ON a.Violador_jrViolador = m.idMaior 
+            WHERE a.idAtendimento = ?
+        `, [id]);
+
+        if (!atendimentos || atendimentos.length === 0) {
+            return res.status(404).json({ error: 'Atendimento não encontrado' });
+        }
+
+        res.json(atendimentos[0]);
+    } catch (error) {
+        console.error('Erro ao buscar atendimento por ID:', error);
+        res.status(500).json({ error: 'Erro interno do servidor', details: error.message });
     }
 };
 
 module.exports = {
     createAtendimento,
-    getAtendimentos
+    getAtendimentos,
+    getAtendimentoById
 };

@@ -1,5 +1,6 @@
+const path = require('path');
 const mysql = require('mysql2/promise');
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const dbHost = process.env.DB_HOST || '127.0.0.1';
 const finalHost = dbHost === 'localhost' ? '127.0.0.1' : dbHost;
@@ -27,8 +28,13 @@ const pool = mysql.createPool(dbConfig);
 
 const query = async (sql, params = []) => {
     try {
-        const [results] = await pool.execute(sql, params);
-        return results;
+        if (params && params.length > 0) {
+            const [results] = await pool.execute(sql, params);
+            return results;
+        } else {
+            const [results] = await pool.query(sql);
+            return results;
+        }
     } catch (error) {
         console.error('Erro na query:', error);
         throw error;

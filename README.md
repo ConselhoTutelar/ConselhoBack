@@ -1,6 +1,18 @@
 # Conselho Tutelar - Back-end API
 
-API REST em Node.js com Express e MySQL para o sistema de gestão do Conselho Tutelar.
+API REST moderna desenvolvida em Node.js com Express e MySQL para o sistema de gestão do Conselho Tutelar.
+
+A aplicação conta com arquitetura de segurança **Zero-Trust**, controle de acesso baseado em papéis (**RBAC**), trilha de auditoria permanente com **imutabilidade criptográfica (SHA-256)** e suporte completo a containers com **Docker**.
+
+---
+
+## 🛡️ Destaques da Arquitetura
+
+- **Segurança Zero-Trust & RBAC:** Autenticação stateless via JSON Web Tokens (JWT) com verificação em cada requisição e distinção de privilégios (`admin` para gestão/diretoria e `conselheiro` para atuação técnica).
+- **Trilha de Auditoria Imutável (Anti-Tampering):** Registro contínuo de todas as ações sensíveis com encadeamento de hashes SHA-256, *snapshots* dos operadores no momento da ação e bloqueio total de edições/exclusões via triggers no banco de dados.
+- **Rastreabilidade Permanente Entre Mandatos:** Preservação integral do histórico de auditoria e medidas, garantindo conformidade legal mesmo após a transição de mandatos e conselheiros.
+- **Georreferenciamento:** Integração com mapas para geocodificação e espacialização de denúncias e ocorrências.
+- **Migrations & Seeds Automatizados:** Versionamento declarativo de banco com suporte a scripts SQL e JavaScript.
 
 ---
 
@@ -79,10 +91,33 @@ Ideal se preferir depurar o Node.js diretamente na sua máquina:
    ```bash
    npm run migrate
    ```
-3. Inicie o servidor Node.js com auto-reload:
+3. *(Opcional, mas recomendado)* Popule os usuários e registros iniciais:
+   ```bash
+   npm run db:seed
+   ```
+4. Inicie o servidor Node.js com auto-reload:
    ```bash
    npm run dev
    ```
+
+---
+
+### 5. Executar os Testes Automatizados (E2E)
+A aplicação possui uma suíte integrada de testes ponta a ponta validando autenticação, fluxo de denúncias, permissões e integridade criptográfica da auditoria:
+```bash
+npm test
+```
+
+---
+
+## 👤 Credenciais Padrão de Acesso (Demonstração / Seed)
+
+O comando `npm run db:seed` inicializa os seguintes usuários no banco (senhas criptografadas com `bcrypt`):
+
+| Usuário | Senha | Perfil (`role`) | Cargo | Privilégios no Sistema |
+| :--- | :--- | :--- | :--- | :--- |
+| `admin` | `admin` | `admin` | Secretária Municipal | Acesso total, gestão de conselheiros/usuários, consulta à trilha de auditoria e verificação de integridade |
+| `conselheiro` | `conselheiro` | `conselheiro` | Conselheiro Tutelar | Registro e consulta de denúncias, fichas de atendimento, notificações, medidas de proteção e marcadores no mapa |
 
 ---
 
@@ -93,15 +128,22 @@ Ideal se preferir depurar o Node.js diretamente na sua máquina:
 | :--- | :--- |
 | `npm run dev` | Inicia a API com auto-reload (`node --watch`) e executa auto-migrations |
 | `npm start` | Inicia a API em modo padrão de produção |
-| `node server.js` | Executa o ponto de entrada da aplicação manualmente |
+| `node src/server.js` | Executa o ponto de entrada da aplicação manualmente |
 
-### 🗄️ Banco de Dados & Migrations
+### 🧪 Testes Automatizados
 | Comando | Descrição |
 | :--- | :--- |
-| `npm run migrate` | Executa todas as migrations `.sql` pendentes |
+| `npm test` | Executa a suíte completa de testes de integração E2E com validação Zero-Trust |
+| `npm run test:e2e` | Alias para `npm test` |
+
+### 🗄️ Banco de Dados, Migrations & Seeds
+| Comando | Descrição |
+| :--- | :--- |
+| `npm run migrate` | Executa todas as migrations pendentes (`.sql` e `.js`) |
 | `npm run db:migrate` | Alias para `npm run migrate` |
-| `npm run migrate:create <nome>` | Cria um novo arquivo versionado em `migrations/` (ex: `002_adicionar_tabela.sql`) |
-| `npm run db:init` | Executa o script direto que inicializa o `schema.sql` legado |
+| `npm run db:seed` | Popula usuários padrão com hash bcrypt e dados de exemplo |
+| `npm run migrate:create <nome>` | Cria um novo arquivo versionado em `migrations/` |
+| `npm run db:init` | Executa a inicialização legada direta do banco |
 
 ### 🐳 Docker & Containers
 | Comando | Descrição |
@@ -132,29 +174,102 @@ Configuradas no arquivo `.env`:
 | `DB_PASSWORD` | Senha do usuário do banco | `conselhopassword` |
 | `DB_ROOT_PASSWORD` | Senha de root utilizada na criação do container MySQL | `rootpassword` |
 | `CORS_ORIGIN` | Origens autorizadas para CORS (separadas por vírgula) | `http://localhost:5173,http://localhost:3000` |
+| `JWT_SECRET` | Chave secreta de assinatura criptográfica dos tokens JWT | *(chave padrão de 256 bits)* |
+| `JWT_EXPIRES_IN` | Tempo de expiração do token de sessão | `8h` |
+| `MANDATO_VIGENTE` | Identificador do mandato atual para a trilha de auditoria | `Gestão 2024-2027` |
 
 ---
 
 ## 📡 Endpoints da API
 
-| Método | Rota | Descrição |
-| :--- | :--- | :--- |
-| `GET` | `/` | Verificação de status e lista de endpoints disponíveis |
-| `GET` | `/test-db` | Teste de conectividade com o banco de dados |
-| `GET` | `/conselheiros` | Lista todos os conselheiros cadastrados |
-| `GET` | `/denuncias` | Lista todas as denúncias |
-| `POST` | `/denuncias` | Registra uma nova denúncia (com geocodificação no mapa) |
-| `GET` | `/atendimentos` | Lista todos os atendimentos |
-| `POST` | `/atendimentos` | Registra um novo atendimento |
-| `GET` | `/notificacoes` | Lista todas as notificações |
-| `POST` | `/notificacoes` | Cria uma nova notificação |
-| `GET` | `/termos-medidas-menor` | Lista termos de medidas aplicadas a menor |
-| `POST` | `/termos-medidas-menor` | Cria termo de medidas para menor |
-| `GET` | `/termos-medidas-responsavel` | Lista termos de medidas para responsáveis |
-| `POST` | `/termos-medidas-responsavel` | Cria termo de medidas para responsáveis |
-| `GET` | `/documentos` | Consulta agregada de todos os tipos de documentos |
-| `GET` | `/marcadores-mapa` | Lista as coordenadas dos marcadores no mapa |
-| `POST` | `/marcadores-mapa` | Cria um marcador manual no mapa |
+Todas as rotas protegidas exigem o cabeçalho HTTP:
+```http
+Authorization: Bearer <TOKEN_JWT>
+```
+
+### 🔓 Públicos & Diagnóstico
+| Método | Rota | Autenticação | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/` | Pública | Verificação de status e catálogo de endpoints disponíveis |
+| `GET` | `/test-db` | Pública | Teste de conectividade e integridade com o MySQL |
+
+### 🔐 Autenticação & Sessão
+| Método | Rota | Autenticação | Descrição |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/login` | Pública | Autenticação por usuário e senha; retorna token JWT e dados do perfil |
+| `GET` | `/auth/me` | Autenticado | Retorna os dados do usuário autenticado no token atual |
+| `POST` | `/auth/logout` | Autenticado | Encerramento de sessão com registro na auditoria |
+
+### 👥 Conselheiros & Profissionais
+| Método | Rota | Permissão | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/conselheiros` | Autenticado | Lista todos os conselheiros e profissionais cadastrados |
+| `GET` | `/conselheiros/:id` | Autenticado | Detalha um conselheiro específico pelo ID |
+| `POST` | `/conselheiros` | **Admin** | Cadastra um novo conselheiro ou operador |
+| `PUT` | `/conselheiros/:id` | **Admin** | Atualiza os dados de um profissional |
+| `DELETE` | `/conselheiros/:id` | **Admin** | Remove o registro de um profissional |
+
+### 🚨 Denúncias
+| Método | Rota | Permissão | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/denuncias` | Autenticado | Lista todas as denúncias registradas |
+| `GET` | `/denuncias/:id` | Autenticado | Obtém os detalhes completos de uma denúncia |
+| `POST` | `/denuncias` | Autenticado | Registra uma nova denúncia (com geocodificação automática de endereço) |
+
+### 📝 Atendimentos
+| Método | Rota | Permissão | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/atendimentos` | Autenticado | Lista todos os atendimentos realizados |
+| `GET` | `/atendimentos/:id` | Autenticado | Detalha uma ficha de atendimento pelo ID |
+| `POST` | `/atendimentos` | Autenticado | Registra uma nova ficha de atendimento |
+
+### 📩 Notificações
+| Método | Rota | Permissão | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/notificacoes` | Autenticado | Lista todas as notificações emitidas |
+| `GET` | `/notificacoes/:id` | Autenticado | Detalha uma notificação pelo ID |
+| `POST` | `/notificacoes` | Autenticado | Cria e emite uma nova notificação |
+
+### ⚖️ Termos de Medidas Aplicadas
+| Método | Rota | Permissão | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/termos-medidas-menor` | Autenticado | Lista medidas protetivas aplicadas a crianças/adolescentes (ECA Art. 101) |
+| `POST` | `/termos-medidas-menor` | Autenticado | Registra um termo de medidas para menores |
+| `GET` | `/termos-medidas-responsavel` | Autenticado | Lista medidas aplicadas a pais ou responsáveis (ECA Art. 129) |
+| `POST` | `/termos-medidas-responsavel` | Autenticado | Registra um termo de medidas para pais/responsáveis |
+
+### 📂 Documentos Unificados
+| Método | Rota | Permissão | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/documentos` | Autenticado | Retorna visão agregada de todos os tipos de documentos (denúncias, atendimentos, notificações e termos) |
+
+### 🗺️ Georreferenciamento & Mapa
+| Método | Rota | Permissão | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/marcadores-mapa` | Autenticado | Lista as coordenadas e metadados de ocorrências no mapa |
+| `POST` | `/marcadores-mapa` | Autenticado | Cria um marcador manual no mapa |
+| `POST` | `/marcadores-mapa/geocodificar` | Autenticado | Geocodifica um endereço em latitude/longitude via OpenStreetMap/Nominatim |
+
+### 📜 Auditoria Imutável & Compliance
+| Método | Rota | Permissão | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/auditoria` | **Admin** | Consulta paginada da trilha de auditoria com filtros avançados (mandato, ação, recurso, operador, período) |
+| `GET` | `/auditoria/integridade` | **Admin** | Valida a integridade criptográfica da cadeia de hashes SHA-256 (Anti-Tamper Check) |
+| `GET` | `/auditoria/estatisticas` | **Admin** | Métricas consolidadas de compliance, alertas de acesso negado e distribuição por mandatos |
+
+---
+
+## 🔒 Mecanismos de Segurança e Integridade
+
+### Modelo Zero-Trust
+1. **Verificação Contínua:** Nenhuma rota de domínio confia na origem implicitamente. Cada requisição é validada pelo `authMiddleware`.
+2. **Princípio do Menor Privilégio:** Rotas sensíveis (como auditoria e gerenciamento de membros) são estritamente isoladas pelo `roleMiddleware` (`requireRole('admin')`).
+3. **Senhas Seguras:** Armazenamento exclusivamente com hash e salt via algoritmo `bcrypt`.
+
+### Trilha de Auditoria Criptográfica
+1. **Encadeamento SHA-256:** Cada evento calcula seu próprio hash combinando `timestamp`, dados do operador, ação executada, recurso e o `hashAnterior` do registro precedente, formando uma sequência contínua a partir de um bloco gênese.
+2. **Proteção Anti-Tampering (Triggers SQL):** Triggers `trg_prevent_audit_update` e `trg_prevent_audit_delete` impedem qualquer tentativa de exclusão ou alteração de registros no banco, retornando código `SQLSTATE 45000`.
+3. **Independência de Mandatos:** As ações gravam um *snapshot* imutável contendo nome, cargo e CPF do operador no momento da operação, associados ao mandato vigente (`mandatoGestao`). Caso conselheiros encerrem o mandato ou sejam desativados, o histórico de atos praticados permanece 100% inalterado e auditável.
 
 ---
 
@@ -173,10 +288,11 @@ Se você já tiver um serviço MySQL instalado localmente rodando na porta `3306
    ```
 
 ### Resetar o banco de dados do zero
-Para descartar os dados locais, apagar o volume persistente e rodar as migrations novamente:
+Para descartar os dados locais, apagar o volume persistente e rodar as migrations e seeds novamente:
 ```bash
 docker compose down -v
 npm run docker:up
+npm run db:seed
 ```
 
 ### O container não conecta ou acusa recusa de conexão

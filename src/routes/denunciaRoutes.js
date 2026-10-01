@@ -1,9 +1,12 @@
 const { Router } = require('express');
-const { createDenuncia, getDenuncias } = require('../controllers/denunciaController');
+const { createDenuncia, getDenuncias, getDenunciaById } = require('../controllers/denunciaController');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = Router();
 
-router.post('/denuncias', createDenuncia);
-router.get('/denuncias', getDenuncias);
+// Todas as rotas de denúncias requerem autenticação (Zero-Trust)
+router.post('/denuncias', authMiddleware, createDenuncia);
+router.get('/denuncias', authMiddleware, getDenuncias);
+router.get('/denuncias/:id', authMiddleware, getDenunciaById);
 
 module.exports = router;

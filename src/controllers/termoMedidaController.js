@@ -1,4 +1,5 @@
 const { query } = require('../config/db');
+const { registrarLog } = require('../services/auditoriaService');
 
 const createTermoMenor = async (req, res) => {
     try {
@@ -42,18 +43,32 @@ const createTermoMenor = async (req, res) => {
         const termo = {
             idmedida_aplicada: idTermo,
             data: dataTermo || null,
+            horaTermo: horaTermo || null,
             descricao: aplicacaoMedidasTexto || null,
             inciso: inciso,
             medidasSelecionadas,
             assinatura: assinatura || null
         };
 
+        // Trilha de Auditoria Zero-Trust
+        await registrarLog({
+            usuarioId: req.user?.idUsuario,
+            username: req.user?.username || 'sistema',
+            role: req.user?.role || 'conselheiro',
+            acao: 'APLICAR_MEDIDA_MENOR',
+            recurso: `/termos-medidas-menor/${idTermo}`,
+            status: 'SUCESSO',
+            detalhes: { idTermo, inciso, dataTermo },
+            ip: req.ip,
+            userAgent: req.headers['user-agent']
+        });
+
         res.status(201).json({
-            message: 'Termo de medidas criado com sucesso',
+            message: 'Termo de medidas para criança/adolescente criado com sucesso',
             termo
         });
     } catch (error) {
-        console.error('Erro ao criar termo de medidas:', error);
+        console.error('Erro ao criar termo de medidas menor:', error);
         res.status(500).json({ error: 'Erro ao criar termo de medidas', details: error.message });
     }
 };
@@ -63,8 +78,8 @@ const getTermosMenor = async (req, res) => {
         const termos = await query('SELECT * FROM medida_aplicacao_menor ORDER BY idmedida_aplicada DESC');
         res.json(termos);
     } catch (error) {
-        console.error('Erro ao buscar termos de medidas:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+        console.error('Erro ao buscar termos de medidas menor:', error);
+        res.status(500).json({ error: 'Erro interno do servidor', details: error.message });
     }
 };
 
@@ -114,18 +129,32 @@ const createTermoResponsavel = async (req, res) => {
         const termo = {
             idmedida_aplicada: idTermo,
             data: dataTermo || null,
+            horaTermo: horaTermo || null,
             descricao: aplicacaoMedidasTexto || null,
             inciso: inciso,
             medidasSelecionadas,
             assinatura: assinatura || null
         };
 
+        // Trilha de Auditoria Zero-Trust
+        await registrarLog({
+            usuarioId: req.user?.idUsuario,
+            username: req.user?.username || 'sistema',
+            role: req.user?.role || 'conselheiro',
+            acao: 'APLICAR_MEDIDA_RESPONSAVEL',
+            recurso: `/termos-medidas-responsavel/${idTermo}`,
+            status: 'SUCESSO',
+            detalhes: { idTermo, inciso, dataTermo },
+            ip: req.ip,
+            userAgent: req.headers['user-agent']
+        });
+
         res.status(201).json({
-            message: 'Termo de medidas criado com sucesso',
+            message: 'Termo de medidas para pais/responsáveis criado com sucesso',
             termo
         });
     } catch (error) {
-        console.error('Erro ao criar termo de medidas:', error);
+        console.error('Erro ao criar termo de medidas responsável:', error);
         res.status(500).json({ error: 'Erro ao criar termo de medidas', details: error.message });
     }
 };
@@ -135,8 +164,8 @@ const getTermosResponsavel = async (req, res) => {
         const termos = await query('SELECT * FROM medida_aplicacao_responsavel ORDER BY idmedida_aplicada DESC');
         res.json(termos);
     } catch (error) {
-        console.error('Erro ao buscar termos de medidas:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+        console.error('Erro ao buscar termos de medidas responsável:', error);
+        res.status(500).json({ error: 'Erro interno do servidor', details: error.message });
     }
 };
 

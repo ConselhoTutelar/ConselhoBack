@@ -4,13 +4,16 @@ const getRoot = (req, res) => {
     res.json({
         message: 'API do Conselho Tutelar está rodando!',
         endpoints: {
-            conselheiros: 'GET /conselheiros',
-            denuncias: 'GET /denuncias, POST /denuncias',
-            atendimentos: 'GET /atendimentos, POST /atendimentos',
-            notificacoes: 'GET /notificacoes, POST /notificacoes',
+            auth: 'POST /auth/login, GET /auth/me, POST /auth/logout',
+            conselheiros: 'GET /conselheiros, GET /conselheiros/:id, POST /conselheiros, PUT /conselheiros/:id, DELETE /conselheiros/:id',
+            denuncias: 'GET /denuncias, GET /denuncias/:id, POST /denuncias',
+            atendimentos: 'GET /atendimentos, GET /atendimentos/:id, POST /atendimentos',
+            notificacoes: 'GET /notificacoes, GET /notificacoes/:id, POST /notificacoes',
             termosMedidasMenor: 'GET /termos-medidas-menor, POST /termos-medidas-menor',
             termosMedidasResponsavel: 'GET /termos-medidas-responsavel, POST /termos-medidas-responsavel',
             documentos: 'GET /documentos',
+            marcadoresMapa: 'GET /marcadores-mapa, POST /marcadores-mapa, POST /marcadores-mapa/geocodificar',
+            auditoria: 'GET /auditoria, GET /auditoria/integridade, GET /auditoria/estatisticas',
             testDb: 'GET /test-db (testa conexão com banco)'
         }
     });

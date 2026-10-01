@@ -1,0 +1,51 @@
+-- Migration 002: Zero-Trust Security, Usuario, AuditoriaLogs e fortalecimento de tipos
+
+CREATE TABLE IF NOT EXISTS Usuario (
+    idUsuario INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    nome VARCHAR(250) NOT NULL,
+    email VARCHAR(250) NOT NULL,
+    cargo VARCHAR(100) NOT NULL,
+    role ENUM('admin', 'conselheiro') NOT NULL DEFAULT 'conselheiro',
+    telefone VARCHAR(50),
+    matricula VARCHAR(50),
+    unidade VARCHAR(150),
+    areaAtuacao VARCHAR(150),
+    plantao VARCHAR(250),
+    idConselheiro INT NULL,
+    idSecretario INT NULL,
+    ativo BOOLEAN DEFAULT TRUE,
+    criadoEm TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_usuario_username (username),
+    INDEX idx_usuario_role (role)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS AuditoriaLogs (
+    idLog INT PRIMARY KEY AUTO_INCREMENT,
+    usuarioId INT NULL,
+    username VARCHAR(50) NULL,
+    usuarioNome VARCHAR(250) NULL,
+    usuarioCpf VARCHAR(20) NULL,
+    usuarioCargo VARCHAR(100) NULL,
+    mandatoGestao VARCHAR(100) DEFAULT 'Gestão Vigente',
+    role VARCHAR(50) NULL,
+    acao VARCHAR(100) NOT NULL,
+    recurso VARCHAR(100) NOT NULL,
+    idRecurso VARCHAR(50) NULL,
+    dadosAntes JSON NULL,
+    dadosDepois JSON NULL,
+    detalhes TEXT NULL,
+    ip VARCHAR(50) NULL,
+    userAgent VARCHAR(255) NULL,
+    dataHora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'SUCESSO',
+    hashAnterior VARCHAR(64) NULL,
+    hashRegistro VARCHAR(64) NULL,
+    INDEX idx_audit_usuario (usuarioId),
+    INDEX idx_audit_data (dataHora),
+    INDEX idx_audit_acao (acao),
+    INDEX idx_audit_mandato (mandatoGestao),
+    INDEX idx_audit_usuario_nome (usuarioNome),
+    INDEX idx_audit_recurso_id (recurso, idRecurso)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
