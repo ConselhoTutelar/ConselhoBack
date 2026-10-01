@@ -48,7 +48,7 @@ const runMigrations = async () => {
         }
 
         const files = fs.readdirSync(migrationsDir)
-            .filter(f => f.endsWith('.sql'))
+            .filter(f => f.endsWith('.sql') || f.endsWith('.js'))
             .sort();
 
         const pending = files.filter(f => !executedMigrations.has(f));
@@ -62,10 +62,19 @@ const runMigrations = async () => {
 
         for (const file of pending) {
             const filePath = path.join(migrationsDir, file);
-            const sql = fs.readFileSync(filePath, 'utf8');
 
             console.log(`⏳ Executando migration: ${file}...`);
-            await connection.query(sql);
+            if (file.endsWith('.js')) {
+                const migrationModule = require(filePath);
+                if (typeof migrationModule === 'function') {
+                    await migrationModule(connection);
+                } else if (typeof migrationModule.up === 'function') {
+                    await migrationModule.up(connection);
+                }
+            } else {
+                const sql = fs.readFileSync(filePath, 'utf8');
+                await connection.query(sql);
+            }
             await connection.query('INSERT INTO _migrations (name) VALUES (?)', [file]);
             console.log(`✅ [OK] Migration aplicada com sucesso: ${file}`);
         }

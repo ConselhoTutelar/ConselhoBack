@@ -5,13 +5,16 @@ const {
     createTermoResponsavel,
     getTermosResponsavel
 } = require('../controllers/termoMedidaController');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = Router();
 
-router.post('/termos-medidas-menor', createTermoMenor);
-router.get('/termos-medidas-menor', getTermosMenor);
+// Medidas para Criança ou Adolescente
+router.post('/termos-medidas-menor', authMiddleware, createTermoMenor);
+router.get('/termos-medidas-menor', authMiddleware, getTermosMenor);
 
-router.post('/termos-medidas-responsavel', createTermoResponsavel);
-router.get('/termos-medidas-responsavel', getTermosResponsavel);
+// Medidas para Pais ou Responsáveis
+router.post('/termos-medidas-responsavel', authMiddleware, createTermoResponsavel);
+router.get('/termos-medidas-responsavel', authMiddleware, getTermosResponsavel);
 
 module.exports = router;

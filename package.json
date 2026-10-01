@@ -12,17 +12,21 @@
     "docker:db": "docker compose up -d db",
     "migrate": "node src/database/migrate.js",
     "db:migrate": "node src/database/migrate.js",
+    "db:seed": "node src/database/zero_trust_migration.js",
     "migrate:create": "node scripts/create-migration.js",
     "db:init": "node scripts/init-db.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test:e2e": "node scripts/test-integration.js",
+    "test": "node scripts/test-integration.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.14.3"
   }
 }

@@ -5,7 +5,7 @@ services:
     image: mysql:8.0
     container_name: conselho_tutelar_mysql
     restart: unless-stopped
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --log_bin_trust_function_creators=1
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
       MYSQL_DATABASE: ${DB_NAME:-conselhotutelar}
@@ -41,6 +41,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-conselhopassword}
       DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000}
+      JWT_SECRET: ${JWT_SECRET:-conselho_tutelar_panambi_rs_zero_trust_jwt_secret_key_2026}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
     volumes:
       - .:/app
       - /app/node_modules
