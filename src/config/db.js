@@ -44,19 +44,19 @@ const query = async (sql, params = []) => {
 const checkDatabaseConnection = async (maxRetries = 5, delayMs = 3000) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            console.log(`📡 Tentativa ${attempt}/${maxRetries}: Conectando ao MySQL (${dbConfig.host}:${dbConfig.port})...`);
+            console.log(`Tentativa ${attempt}/${maxRetries}: Conectando ao MySQL (${dbConfig.host}:${dbConfig.port})...`);
             const connection = await pool.getConnection();
             connection.release();
-            console.log('✅ Conexão com o banco de dados MySQL estabelecida com sucesso!');
+            console.log('Conexão com o banco de dados MySQL estabelecida com sucesso!');
             return true;
         } catch (error) {
-            console.error(`⚠️ Falha na conexão com o banco (tentativa ${attempt}/${maxRetries}):`, error.message);
+            console.error(`Falha na conexão com o banco (tentativa ${attempt}/${maxRetries}):`, error.message);
             if (attempt < maxRetries) {
-                console.log(`⏳ Aguardando ${delayMs / 1000}s para nova tentativa...`);
+                console.log(`Aguardando ${delayMs / 1000}s para nova tentativa...`);
                 await new Promise(res => setTimeout(res, delayMs));
             } else {
-                console.error('\n❌ Não foi possível conectar ao banco de dados após múltiplas tentativas.');
-                console.error('💡 Dica: Verifique se o container Docker está rodando com:');
+                console.error('\nNão foi possível conectar ao banco de dados após múltiplas tentativas.');
+                console.error('Dica: Verifique se o container Docker está rodando com:');
                 console.error('   npm run docker:up');
                 console.error('   e confira se as variáveis no seu .env estão corretas.\n');
                 throw error;

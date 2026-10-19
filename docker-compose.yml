@@ -52,7 +52,7 @@ services:
 
   frontend:
     build:
-      context: ${FRONT_PATH:-../conselho-tutelar-front}
+      context: ${FRONT_PATH:-../ConselhoFront}
       dockerfile: Dockerfile
     container_name: conselho_tutelar_front
     restart: unless-stopped
@@ -61,7 +61,7 @@ services:
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
     volumes:
-      - ${FRONT_PATH:-../conselho-tutelar-front}:/app
+      - ${FRONT_PATH:-../ConselhoFront}:/app
       - /app/node_modules
     depends_on:
       - backend
