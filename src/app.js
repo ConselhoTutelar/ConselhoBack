@@ -14,13 +14,25 @@ const auditoriaRoutes = require('./routes/auditoriaRoutes');
 
 const app = express();
 
+// Necessário para obter IP real atrás de proxies como Vercel / Render / Cloudflare
+app.set('trust proxy', 1);
+
 const allowedOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim().replace(/\/+$/, ''))
     : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'];
 
 const corsOptions = {
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        if (!origin) {
+            return callback(null, true);
+        }
+        const normalizedOrigin = origin.replace(/\/+$/, '');
+        const isVercelDomain = normalizedOrigin.endsWith('.vercel.app');
+        if (
+            allowedOrigins.includes('*') ||
+            allowedOrigins.includes(normalizedOrigin) ||
+            isVercelDomain
+        ) {
             callback(null, true);
         } else {
             console.warn(`[CORS] Origem bloqueada: ${origin}`);

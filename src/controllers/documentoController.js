@@ -5,9 +5,10 @@ const getDocumentos = async (req, res) => {
     try {
         const [denuncias, atendimentos, notificacoes, termosMenor, termosResponsavel] = await Promise.all([
             query(`
-                SELECT d.*, c.nomeConselheiro 
+                SELECT d.*, c.nomeConselheiro, dv.Descricao as direitoVioladoDescricao 
                 FROM Denuncia d 
                 LEFT JOIN Conselheiro c ON d.idConselheiro = c.idConselheiro 
+                LEFT JOIN DireitoViolado dv ON d.idDireitoViolado = dv.idDireitoViolado 
                 ORDER BY d.nrDenuncia DESC 
                 LIMIT 100
             `),
@@ -27,7 +28,7 @@ const getDocumentos = async (req, res) => {
                 LIMIT 100
             `),
             query(`
-                SELECT tm.*, m.nomeMenor 
+                SELECT tm.*, m.nomeMenor, m.Bairro as bairro, m.Rua as rua 
                 FROM medida_aplicacao_menor tm 
                 LEFT JOIN Menor m ON tm.idMenor = m.idMenor 
                 ORDER BY tm.idmedida_aplicada DESC 

@@ -47,15 +47,19 @@ module.exports = async function (connection) {
     }
 
     console.log('   📝 Atualizando snapshots dos registros existentes...');
-    await connection.query(`
-        UPDATE AuditoriaLogs a
-        LEFT JOIN Usuario u ON a.usuarioId = u.idUsuario
-        SET 
-            a.usuarioNome = COALESCE(u.nome, a.username, 'Sistema'),
-            a.usuarioCargo = COALESCE(u.cargo, 'Membro do Conselho'),
-            a.mandatoGestao = 'Gestão Atual (2024-2027)'
-        WHERE a.usuarioNome IS NULL
-    `);
+    try {
+        await connection.query(`
+            UPDATE AuditoriaLogs a
+            LEFT JOIN Usuario u ON a.usuarioId = u.idUsuario
+            SET 
+                a.usuarioNome = COALESCE(u.nome, a.username, 'Sistema'),
+                a.usuarioCargo = COALESCE(u.cargo, 'Membro do Conselho'),
+                a.mandatoGestao = 'Gestão Atual (2024-2027)'
+            WHERE a.usuarioNome IS NULL
+        `);
+    } catch (updateErr) {
+        console.warn('   ⚠️ Aviso ao atualizar snapshots iniciais:', updateErr.message);
+    }
 
     console.log('   🛡️ Configurando triggers de proteção imutável (Anti-Tampering)...');
     try {
@@ -81,7 +85,7 @@ module.exports = async function (connection) {
             END
         `);
     } catch (triggerErr) {
-        console.warn('   ⚠️ Aviso ao criar triggers no banco (privilégios restritos):', triggerErr.message);
+        console.warn('   ⚠️ Aviso ao criar triggers no banco (privilégios restritos ou TiDB Cloud Serverless):', triggerErr.message);
     }
 
     console.log('   ✅ Sistema de auditoria imutável concluído com sucesso!');

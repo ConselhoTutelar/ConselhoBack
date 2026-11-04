@@ -1,7 +1,7 @@
 const { query } = require('../config/db');
 const bcrypt = require('bcryptjs');
 
-async function runZeroTrustMigration() {
+async function runZeroTrustMigration({ forceResetPasswords = false } = {}) {
     console.log('🔒 [ZERO-TRUST MIGRATION] Iniciando migração e blindagem do banco de dados...');
 
     try {
@@ -37,14 +37,23 @@ async function runZeroTrustMigration() {
                 idLog INT PRIMARY KEY AUTO_INCREMENT,
                 usuarioId INT NULL,
                 username VARCHAR(50) NULL,
+                usuarioNome VARCHAR(250) NULL,
+                usuarioCpf VARCHAR(20) NULL,
+                usuarioCargo VARCHAR(100) NULL,
+                mandatoGestao VARCHAR(100) DEFAULT 'Gestão Vigente',
                 role VARCHAR(50) NULL,
                 acao VARCHAR(100) NOT NULL,
                 recurso VARCHAR(100) NOT NULL,
+                idRecurso VARCHAR(50) NULL,
+                dadosAntes JSON NULL,
+                dadosDepois JSON NULL,
                 detalhes TEXT NULL,
                 ip VARCHAR(50) NULL,
                 userAgent VARCHAR(255) NULL,
                 dataHora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 status VARCHAR(20) DEFAULT 'SUCESSO',
+                hashAnterior VARCHAR(64) NULL,
+                hashRegistro VARCHAR(64) NULL,
                 INDEX idx_audit_usuario (usuarioId),
                 INDEX idx_audit_data (dataHora),
                 INDEX idx_audit_acao (acao)
@@ -116,16 +125,11 @@ async function runZeroTrustMigration() {
         }
 
         // 4. Inserir usuários padrão com senhas seguras com hash bcrypt
-        console.log('🔑 Semeando usuários padrão com hash bcrypt...');
+        console.log('🔑 Verificando usuários padrão...');
 
-        // Hash para senha 'admin'
-        const adminHash = await bcrypt.hash('admin', 10);
-        // Hash para senha 'conselheiro'
-        const conselheiroHash = await bcrypt.hash('conselheiro', 10);
-
-        // Verificar se admin já existe
         const [adminExiste] = await query(`SELECT idUsuario FROM Usuario WHERE username = 'admin'`);
         if (!adminExiste) {
+            const adminHash = await bcrypt.hash('admin', 10);
             await query(`
                 INSERT INTO Usuario (username, password, nome, email, cargo, role, telefone, matricula, unidade)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -141,15 +145,15 @@ async function runZeroTrustMigration() {
                 'Secretaria Municipal de Assistência Social'
             ]);
             console.log('   ✅ Usuário "admin" cadastrado com sucesso!');
-        } else {
-            // Atualizar senha com hash
+        } else if (forceResetPasswords) {
+            const adminHash = await bcrypt.hash('admin', 10);
             await query(`UPDATE Usuario SET password = ? WHERE username = 'admin'`, [adminHash]);
             console.log('   ✅ Usuário "admin" atualizado com hash seguro!');
         }
 
-        // Verificar se conselheiro já existe
         const [conselheiroExiste] = await query(`SELECT idUsuario FROM Usuario WHERE username = 'conselheiro'`);
         if (!conselheiroExiste) {
+            const conselheiroHash = await bcrypt.hash('conselheiro', 10);
             await query(`
                 INSERT INTO Usuario (username, password, nome, email, cargo, role, telefone, matricula, areaAtuacao, plantao)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -166,7 +170,8 @@ async function runZeroTrustMigration() {
                 'Segunda a Sexta, 8h às 12h e 13h30 às 17h30'
             ]);
             console.log('   ✅ Usuário "conselheiro" cadastrado com sucesso!');
-        } else {
+        } else if (forceResetPasswords) {
+            const conselheiroHash = await bcrypt.hash('conselheiro', 10);
             await query(`UPDATE Usuario SET password = ? WHERE username = 'conselheiro'`, [conselheiroHash]);
             console.log('   ✅ Usuário "conselheiro" atualizado com hash seguro!');
         }
@@ -215,7 +220,9 @@ async function runZeroTrustMigration() {
 }
 
 if (require.main === module) {
-    runZeroTrustMigration().then(() => process.exit(0)).catch(() => process.exit(1));
+    runZeroTrustMigration({ forceResetPasswords: true })
+        .then(() => process.exit(0))
+        .catch(() => process.exit(1));
 }
 
 module.exports = { runZeroTrustMigration };
