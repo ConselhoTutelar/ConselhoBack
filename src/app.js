@@ -1,6 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 
+const {
+    securityHeadersMiddleware,
+    rateLimiterMiddleware,
+    payloadSanitizerMiddleware
+} = require('./middlewares/securityMiddleware');
+
 const indexRoutes = require('./routes/indexRoutes');
 const authRoutes = require('./routes/authRoutes');
 const conselheiroRoutes = require('./routes/conselheiroRoutes');
@@ -16,6 +22,10 @@ const app = express();
 
 // Necessário para obter IP real atrás de proxies como Vercel / Render / Cloudflare
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+// 1. Cabeçalhos de Segurança HTTP (OWASP Hardening)
+app.use(securityHeadersMiddleware);
 
 const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim().replace(/\/+$/, ''))
@@ -45,8 +55,14 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// 2. Controle de Taxa (Anti-Brute-Force & Anti-DoS)
+app.use(rateLimiterMiddleware);
+
+// 3. Inspeção e Sanitização Profunda de Payloads (Anti-XSS, Anti-SQLi, Anti-Prototype Pollution)
+app.use(payloadSanitizerMiddleware);
 
 // Rotas do Sistema
 app.use(indexRoutes);
@@ -69,9 +85,9 @@ app.use((req, res) => {
     });
 });
 
-// Middleware Central de Tratamento de Erros
+// Middleware Central de Tratamento de Erros (sem vazamento de stacktrace em produção)
 app.use((err, req, res, next) => {
-    console.error('💥 [ERRO DA APLICAÇÃO]:', err);
+    console.error('💥 [ERRO DA APLICAÇÃO]:', err.message);
     res.status(err.status || 500).json({
         error: err.name || 'Erro Interno do Servidor',
         message: err.message || 'Ocorreu um erro no processamento da requisição.',

@@ -3,6 +3,7 @@ const {
     getConselheiros,
     getConselheiroById,
     createConselheiro,
+    resetarSenhaConselheiro,
     updateConselheiro,
     deleteConselheiro
 } = require('../controllers/conselheiroController');
@@ -15,8 +16,9 @@ const router = Router();
 router.get('/conselheiros', authMiddleware, getConselheiros);
 router.get('/conselheiros/:id', authMiddleware, getConselheiroById);
 
-// Gestão de profissionais (Cadastro, Edição e Exclusão) restrita para papel 'admin' (Secretário/Diretor)
+// Gestão de profissionais (Cadastro, Edição, Reset de Senha e Exclusão) restrita para papel 'admin' (Secretário/Diretor)
 router.post('/conselheiros', authMiddleware, requireRole('admin'), createConselheiro);
+router.post('/conselheiros/:id/resetar-senha', authMiddleware, requireRole('admin'), resetarSenhaConselheiro);
 router.put('/conselheiros/:id', authMiddleware, requireRole('admin'), updateConselheiro);
 router.delete('/conselheiros/:id', authMiddleware, requireRole('admin'), deleteConselheiro);
 

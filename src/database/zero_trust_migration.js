@@ -24,11 +24,26 @@ async function runZeroTrustMigration({ forceResetPasswords = false } = {}) {
                 idConselheiro INT NULL,
                 idSecretario INT NULL,
                 ativo BOOLEAN DEFAULT TRUE,
+                precisaTrocarSenha BOOLEAN DEFAULT FALSE,
                 criadoEm TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_usuario_username (username),
                 INDEX idx_usuario_role (role)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
+
+        // Verificar se a coluna precisaTrocarSenha já existe em Usuario
+        try {
+            const [colPrecisaTrocar] = await query(`
+                SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Usuario' AND COLUMN_NAME = 'precisaTrocarSenha'
+            `);
+            if (!colPrecisaTrocar) {
+                console.log('   + Adicionando coluna "precisaTrocarSenha" na tabela Usuario...');
+                await query(`ALTER TABLE Usuario ADD COLUMN precisaTrocarSenha BOOLEAN DEFAULT FALSE`);
+            }
+        } catch (errCol) {
+            console.warn('   (Aviso ao verificar coluna precisaTrocarSenha:', errCol.message, ')');
+        }
 
         // 2. Criar tabela de Trilha de Auditoria (Zero-Trust Audit Log)
         console.log('📜 Criando tabela AuditoriaLogs...');
@@ -124,59 +139,7 @@ async function runZeroTrustMigration({ forceResetPasswords = false } = {}) {
             console.log('   (Medidas colunas já ajustadas:', e.message, ')');
         }
 
-        // 4. Inserir usuários padrão com senhas seguras com hash bcrypt
-        console.log('🔑 Verificando usuários padrão...');
-
-        const [adminExiste] = await query(`SELECT idUsuario FROM Usuario WHERE username = 'admin'`);
-        if (!adminExiste) {
-            const adminHash = await bcrypt.hash('admin', 10);
-            await query(`
-                INSERT INTO Usuario (username, password, nome, email, cargo, role, telefone, matricula, unidade)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                'admin',
-                adminHash,
-                'Ana Beatriz Lima',
-                'ana.lima@panambi.rs.gov.br',
-                'Secretária Municipal',
-                'admin',
-                '(55) 99921-1111',
-                'CT-ADM-001',
-                'Secretaria Municipal de Assistência Social'
-            ]);
-            console.log('   ✅ Usuário "admin" cadastrado com sucesso!');
-        } else if (forceResetPasswords) {
-            const adminHash = await bcrypt.hash('admin', 10);
-            await query(`UPDATE Usuario SET password = ? WHERE username = 'admin'`, [adminHash]);
-            console.log('   ✅ Usuário "admin" atualizado com hash seguro!');
-        }
-
-        const [conselheiroExiste] = await query(`SELECT idUsuario FROM Usuario WHERE username = 'conselheiro'`);
-        if (!conselheiroExiste) {
-            const conselheiroHash = await bcrypt.hash('conselheiro', 10);
-            await query(`
-                INSERT INTO Usuario (username, password, nome, email, cargo, role, telefone, matricula, areaAtuacao, plantao)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                'conselheiro',
-                conselheiroHash,
-                'João Paulo Richter',
-                'joao.richter@panambi.rs.gov.br',
-                'Conselheiro Tutelar',
-                'conselheiro',
-                '(55) 99988-2222',
-                'CT-CON-014',
-                'Bairros Esperança e Centro',
-                'Segunda a Sexta, 8h às 12h e 13h30 às 17h30'
-            ]);
-            console.log('   ✅ Usuário "conselheiro" cadastrado com sucesso!');
-        } else if (forceResetPasswords) {
-            const conselheiroHash = await bcrypt.hash('conselheiro', 10);
-            await query(`UPDATE Usuario SET password = ? WHERE username = 'conselheiro'`, [conselheiroHash]);
-            console.log('   ✅ Usuário "conselheiro" atualizado com hash seguro!');
-        }
-
-        // Sincronizar na tabela Conselheiro para testes de listagem caso vazia
+        // 4. Sincronizar na tabela Conselheiro para testes de listagem caso vazia
         const [conselheirosCount] = await query(`SELECT COUNT(*) as total FROM Conselheiro`);
         if (conselheirosCount.total === 0) {
             console.log('👥 Inserindo conselheiro e secretário de demonstração na tabela Conselheiro...');
@@ -209,6 +172,60 @@ async function runZeroTrustMigration({ forceResetPasswords = false } = {}) {
                 '1980-03-22',
                 'secretario'
             ]);
+        }
+
+        // 5. Inserir usuários padrão com senhas seguras com hash bcrypt
+        console.log('🔑 Verificando usuários padrão...');
+
+        const [adminExiste] = await query(`SELECT idUsuario FROM Usuario WHERE username = 'admin'`);
+        if (!adminExiste) {
+            const adminHash = await bcrypt.hash('admin', 10);
+            await query(`
+                INSERT INTO Usuario (username, password, nome, email, cargo, role, telefone, matricula, unidade, idConselheiro, precisaTrocarSenha)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE)
+            `, [
+                'admin',
+                adminHash,
+                'Ana Beatriz Lima',
+                'ana.lima@panambi.rs.gov.br',
+                'Secretária Municipal',
+                'admin',
+                '(55) 99921-1111',
+                'CT-ADM-001',
+                'Secretaria Municipal de Assistência Social',
+                2
+            ]);
+            console.log('   ✅ Usuário "admin" cadastrado com sucesso!');
+        } else if (forceResetPasswords) {
+            const adminHash = await bcrypt.hash('admin', 10);
+            await query(`UPDATE Usuario SET password = ?, precisaTrocarSenha = FALSE WHERE username = 'admin'`, [adminHash]);
+            console.log('   ✅ Usuário "admin" atualizado com hash seguro!');
+        }
+
+        const [conselheiroExiste] = await query(`SELECT idUsuario FROM Usuario WHERE username = 'conselheiro'`);
+        if (!conselheiroExiste) {
+            const conselheiroHash = await bcrypt.hash('conselheiro', 10);
+            await query(`
+                INSERT INTO Usuario (username, password, nome, email, cargo, role, telefone, matricula, areaAtuacao, plantao, idConselheiro, precisaTrocarSenha)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE)
+            `, [
+                'conselheiro',
+                conselheiroHash,
+                'João Paulo Richter',
+                'joao.richter@panambi.rs.gov.br',
+                'Conselheiro Tutelar',
+                'conselheiro',
+                '(55) 99988-2222',
+                'CT-CON-014',
+                'Bairros Esperança e Centro',
+                'Segunda a Sexta, 8h às 12h e 13h30 às 17h30',
+                1
+            ]);
+            console.log('   ✅ Usuário "conselheiro" cadastrado com sucesso!');
+        } else if (forceResetPasswords) {
+            const conselheiroHash = await bcrypt.hash('conselheiro', 10);
+            await query(`UPDATE Usuario SET password = ?, precisaTrocarSenha = FALSE WHERE username = 'conselheiro'`, [conselheiroHash]);
+            console.log('   ✅ Usuário "conselheiro" atualizado com hash seguro!');
         }
 
         console.log('🎉 [ZERO-TRUST MIGRATION] Migração concluída com sucesso!');

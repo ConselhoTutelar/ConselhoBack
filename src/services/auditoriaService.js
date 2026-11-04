@@ -168,22 +168,26 @@ async function listarLogs({
     // Contagem total para paginação
     const countSql = `SELECT COUNT(*) as total FROM AuditoriaLogs WHERE ${whereSql}`;
     const [countResult] = await query(countSql, params);
-    const total = countResult?.total || 0;
+    const total = Number(countResult?.total) || 0;
+
+    // Sanitização estrita de inteiros para LIMIT e OFFSET (compatível com protocolo binário MySQL 8 / TiDB Cloud)
+    const safeLimit = Math.max(1, Math.min(500, parseInt(limit, 10) || 50));
+    const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
 
     // Busca paginada
     const sql = `
         SELECT * FROM AuditoriaLogs 
         WHERE ${whereSql}
         ORDER BY idLog DESC 
-        LIMIT ? OFFSET ?
+        LIMIT ${safeLimit} OFFSET ${safeOffset}
     `;
 
-    const logs = await query(sql, [...params, Number(limit), Number(offset)]);
+    const logs = await query(sql, params);
 
     return {
         total,
-        limit: Number(limit),
-        offset: Number(offset),
+        limit: safeLimit,
+        offset: safeOffset,
         logs
     };
 }
@@ -214,7 +218,7 @@ async function verificarIntegridadeCadeia() {
         }
 
         // Verifica encadeamento
-        if (log.hashAnterior && log.hashAnterior !== hashEsperado && i > 0 && logs[i-1].hashRegistro) {
+        if (log.hashAnterior && log.hashAnterior !== hashEsperado && i > 0 && logs[i - 1].hashRegistro) {
             violacoes.push({
                 idLog: log.idLog,
                 motivo: 'Quebra na cadeia: hashAnterior não coincide com o hash do registro precedente',
@@ -266,10 +270,10 @@ async function obterEstatisticasAuditoria() {
     `);
 
     return {
-        totalEventos: totais?.totalEventos || 0,
-        eventosHoje: totais?.eventosHoje || 0,
-        alertasSeguranca: totais?.alertasSeguranca || 0,
-        totalMandatosRegistrados: totais?.totalMandatosRegistrados || 0,
+        totalEventos: Number(totais?.totalEventos) || 0,
+        eventosHoje: Number(totais?.eventosHoje) || 0,
+        alertasSeguranca: Number(totais?.alertasSeguranca) || 0,
+        totalMandatosRegistrados: Number(totais?.totalMandatosRegistrados) || 0,
         distribuicaoMandatos: mandatos,
         acoesFrequentes
     };
