@@ -85,7 +85,7 @@ npm run docker:up
 Ideal se preferir depurar o Node.js diretamente na sua máquina:
 1. Suba apenas o container do MySQL:
    ```bash
-   npm run docker:db
+   npm run docker:db    
    ```
 2. Execute as migrations no banco:
    ```bash
